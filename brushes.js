@@ -1,3 +1,10 @@
+/*
+
+- dealing with points should happen at the super-class level
+- points shoud record x, y, pressure, time
+
+*/
+
 function createUUIDv4() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
 	var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -53,6 +60,8 @@ class InkBrush extends Brush {
 	    app.path = new Path()
 
 	    app.path.strokeColor = undefined;
+
+	    // this is bad
 	    app.path.fillColor   = Cookies.get('brushColor') || '#222222aa';
 
 	    app.path.fillColor.alpha = 0.66;
