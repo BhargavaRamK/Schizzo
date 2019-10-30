@@ -44,7 +44,7 @@ class InkBrush extends Brush {
     constructor(project, options) {
 	super(project, options)
 	var app = this;
-	
+	console.log('inkBrush');
 	Pressure.set(app.project.view.element, {
 	    change: function(f, event){ app.force = f }
 	});
@@ -70,8 +70,9 @@ class InkBrush extends Brush {
 	    app.path.name = createUUIDv4();
 	    app.path.addTo(app.project);
 
+	    app.path.data.startTime = (new Date).getTime();
 	    app.path.data.points = [];
-	    app.path.data.points.push(event.point);
+	    app.path.data.points.push({ point: event.point, time: (new Date).getTime() - app.path.data.startTime });
 	}
     }
 
@@ -98,7 +99,7 @@ class InkBrush extends Brush {
 	    app.path.insert(0, bottom.round());
 	    
 	    app.path.smooth();
-	    app.path.data.points.push(event.point);
+	    app.path.data.points.push({ point: event.point, time: (new Date).getTime() - app.path.data.startTime });
 	}
     }
 
@@ -111,7 +112,7 @@ class InkBrush extends Brush {
 	    app.path.closed = true;
 	    app.path.smooth();
 
-	    app.path.data.points.push(event.point);
+	    app.path.data.points.push({ point: event.point, time: (new Date).getTime() - app.path.data.startTime });
 
 	    console.log(app.path.data.points);
 	    
@@ -128,7 +129,7 @@ class Sharpie extends Brush {
 	    if (app.path) { app.path.selected = false }
 
 	    app.path = new Path()
-	    app.path.strokeColor = Cookies.get('brushColor') || 'black';
+	    app.path.strokeColor = 'black';
 	    app.path.strokeColor.alpha = 0.8;
 	    app.path.strokeWidth = 10;
 	    app.path.add(event.point);
@@ -149,9 +150,8 @@ class Sharpie extends Brush {
 	return function(event){
 	    app.path.simplify();
 	    var outerPath = OffsetUtils.offsetPath(app.path, 4);
-
-	    
 	    var innerPath = OffsetUtils.offsetPath(app.path, -4);
+
 	    innerPath.strokeColor = app.path.strokeColor;
 
 	    outerPath.reverse();
@@ -253,9 +253,9 @@ class Eraser extends Brush {
 		console.log(app.changedItems);
 		for (var uuid in app.changedItems) {
 		    if (app.project.getItems({ name: uuid }).length) {
-			app.socket.send(JSON.stringify({ paperItem: project.getItem({ name: uuid}).toJSON() }));
+			// app.socket.send(JSON.stringify({ paperItem: project.getItem({ name: uuid}).toJSON() }));
 		    } else {
-			app.socket.send(JSON.stringify({ paperCommand: 'project.getItem({ name: "' + uuid + '"}).remove()' }))
+			// app.socket.send(JSON.stringify({ paperCommand: 'project.getItem({ name: "' + uuid + '"}).remove()' }))
 		    }
 		}
 		app.changedItems = {};
