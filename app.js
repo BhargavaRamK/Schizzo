@@ -8,8 +8,8 @@ var app = new Vue({
     data: {
 	brush: new InkBrush(paper.project),
 	brushColor: '#000000',
-	pressureFactor: 0.5,
-	brushOpacity: 1,
+	pressureFactor: 50,
+	brushOpacity: 100,
 	paper: paper,
 	colors: [
 	    "#FFFFFF",
@@ -31,6 +31,17 @@ var app = new Vue({
     },
     mounted: function () {
 	paper.setup('canvas');
+
+	var canvas = document.querySelector('canvas');
+	canvas.style.width ='100%';
+	canvas.style.height='100%';
+	
+	canvas.width  = canvas.offsetWidth;
+	canvas.height = canvas.offsetHeight;
+
+	this.brushColor = Cookies.get('brushColor');
+	this.pressureFactor = Cookies.get('pressureFactor');
+	this.brushOpacity = Cookies.get('brushOpacity');
     },
     methods: {
 	setBrushType: function (type) {
