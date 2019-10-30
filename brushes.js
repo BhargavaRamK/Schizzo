@@ -61,11 +61,14 @@ class InkBrush extends Brush {
 
 	    app.path.strokeColor = undefined;
 
-	    // this is bad
+	    // --------------------------
+	    // this is probably bad
+	    // --------------------------
 	    app.path.fillColor   = Cookies.get('brushColor') || '#222222aa';
+	    app.path.fillColor.alpha = (Cookies.get('brushOpacity') / 100) || 0.66;
 
-	    app.path.fillColor.alpha = 0.66;
-
+	    console.log(app.path.fillColor.alpha)
+	    
 	    app.path.add(event.point);
 	    app.path.name = createUUIDv4();
 	    app.path.addTo(app.project);
@@ -121,17 +124,19 @@ class InkBrush extends Brush {
 }
 
 class Sharpie extends Brush {
-
     get onMouseDown() {
 	var app = this;
 	
 	return function(event){
 	    if (app.path) { app.path.selected = false }
-
 	    app.path = new Path()
-	    app.path.strokeColor = 'black';
-	    app.path.strokeColor.alpha = 0.8;
+	    console.log(Cookies.get('brushColor'));
+
+	    app.path.strokeColor       = Cookies.get('brushColor') || 'black';
+	    app.path.strokeColor.alpha = (Cookies.get('brushOpacity') / 100) || 0.8;
+
 	    app.path.strokeWidth = 10;
+
 	    app.path.add(event.point);
 	    app.path.name = createUUIDv4();
 	    app.path.addTo(app.project);	
