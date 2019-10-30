@@ -5,6 +5,11 @@ var menuActions = {
 	var svg = new Blob([ paper.project.exportJSON() ], {type: 'application/json'});
 	saveAs(svg, 'image.json')
     },
+    'save as svg' : function(){
+	console.log('save as SVG');
+	var svg = new Blob([ paper.project.exportSVG({ asString: true }) ], {type: 'image/svg+xml'});
+	saveAs(svg, 'image.svg')
+    },
 };
 
 // ----------------------------------------
