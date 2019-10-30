@@ -2,11 +2,11 @@ paper.install(window);
 
 window.onload = function() {
     var canvas = document.querySelector('canvas');
-    // canvas.style.width ='100%';
-    // canvas.style.height='100%';
+    canvas.style.width ='100%';
+    canvas.style.height='100%';
 
-    // canvas.width  = canvas.offsetWidth;
-    // canvas.height = canvas.offsetHeight;
+    canvas.width  = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
     
     paper.setup('canvas');
     // Create a simple drawing tool:
