@@ -44,10 +44,7 @@ class InkBrush extends Brush {
     constructor(project, options) {
 	super(project, options)
 	var app = this;
-	console.log('inkBrush');
-	Pressure.set(app.project.view.element, {
-	    change: function(f, event){ app.force = f }
-	});
+	Pressure.set(app.project.view.element, { change: function(f, event){ app.force = f } });
     }
 
     
@@ -55,6 +52,9 @@ class InkBrush extends Brush {
 	var app = this;
 	
 	return function(event){
+	    // ---------------------------------------------
+	    // initialization stuff needs to happen here
+	    // ---------------------------------------------
 	    if (app.path) { app.path.selected = false }
 
 	    app.path = new Path()
@@ -66,8 +66,9 @@ class InkBrush extends Brush {
 	    // --------------------------
 	    app.path.fillColor   = Cookies.get('brushColor') || '#222222aa';
 	    app.path.fillColor.alpha = (Cookies.get('brushOpacity') / 100) || 0.66;
+	    app.pressureFactor = Cookies.get('pressureFactor') || 10;
 
-	    console.log(app.path.fillColor.alpha)
+	    // console.log(app.path.fillColor.alpha)
 	    
 	    app.path.add(event.point);
 	    app.path.name = createUUIDv4();
@@ -75,6 +76,7 @@ class InkBrush extends Brush {
 
 	    app.path.data.startTime = (new Date).getTime();
 	    app.path.data.points = [];
+	    app.path.data.pressureFactor = app.pressureFactor;
 	    app.path.data.points.push({ point: event.point, time: (new Date).getTime() - app.path.data.startTime });
 	}
     }
@@ -87,7 +89,7 @@ class InkBrush extends Brush {
 	    // force should be [a basis] + [a factor] * force
 	    // -----------------------------------------------
 
-	    var step = event.delta.normalize().multiply(app.force * 10);
+	    var step = event.delta.normalize().multiply(app.force * app.pressureFactor);
 	    step.angle += 90;
 
 	    // -----------------------------------------------
@@ -129,13 +131,15 @@ class Sharpie extends Brush {
 	
 	return function(event){
 	    if (app.path) { app.path.selected = false }
+
+	    app.pressureFactor = Cookies.get('pressureFactor') || 10;
 	    app.path = new Path()
 	    console.log(Cookies.get('brushColor'));
 
 	    app.path.strokeColor       = Cookies.get('brushColor') || 'black';
 	    app.path.strokeColor.alpha = (Cookies.get('brushOpacity') / 100) || 0.8;
 
-	    app.path.strokeWidth = 10;
+	    app.path.strokeWidth = app.pressureFactor || 10;
 
 	    app.path.add(event.point);
 	    app.path.name = createUUIDv4();
@@ -153,9 +157,12 @@ class Sharpie extends Brush {
     get onMouseUp() {
 	var app = this;
 	return function(event){
+
 	    app.path.simplify();
-	    var outerPath = OffsetUtils.offsetPath(app.path, 4);
-	    var innerPath = OffsetUtils.offsetPath(app.path, -4);
+	    var offset = -1 + app.path.strokeWidth / 2;
+	    
+	    var outerPath = OffsetUtils.offsetPath(app.path, offset);
+	    var innerPath = OffsetUtils.offsetPath(app.path, -offset);
 
 	    innerPath.strokeColor = app.path.strokeColor;
 
