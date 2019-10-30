@@ -1,6 +1,4 @@
-#statusbar * { font-size: 75% !important; }
-
-body {
+#app {
     display: grid;
     height: 100vh;
     margin: 0; padding: 0;
@@ -8,6 +6,9 @@ body {
     grid-template-columns: 48px 1fr 96px;
     grid-template-rows: 56px 1fr 40px;
 }
+
+#statusbar * { font-size: 75% !important; }
+
 #topbar {
     margin: 0; padding: 0;
     grid-column: 1 / 4;
