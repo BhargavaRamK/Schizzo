@@ -1,47 +1,271 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" href="style.css">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <script
+      src="https://code.jquery.com/jquery-3.4.1.min.js"
+      integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+      crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+	  integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+	    integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+	    integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+	    crossorigin="anonymous"></script>
+    <link rel="stylesheet"
+	  type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.smartmenus/1.1.0/addons/bootstrap-4/jquery.smartmenus.bootstrap-4.css" media="screen" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.smartmenus/1.1.0/jquery.smartmenus.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.smartmenus/1.1.0/addons/bootstrap-4/jquery.smartmenus.bootstrap-4.js"></script>
+    <link href="http://netdna.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.css" rel="stylesheet">
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.2/paper-full.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pressure/2.1.2/pressure.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@jaames/iro/dist/iro.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.2/dist/FileSaver.min.js"></script>
+
+    <script type="text/javascript" src="offset.js"></script>
+    <script type="text/javascript" src="brushes.js"></script>
+    <script type="text/javascript" src="main.js"></script>
+    <script type="text/javascript" src="ui.js"></script>
+
 
     <title>Schizzo</title>
-</head>
-<body>
-    <header>
-        <h1>Schizzo</h1>
-    </header>
+    <style>
+
+      #statusbar * { font-size: 75% !important; }
+      body {
+	  display: grid;
+	  height: 100vh;
+	  margin: 0; padding: 0;
+	  border: none;
+	  grid-template-columns: 48px 1fr 96px;
+	  grid-template-rows: 56px 1fr 40px;
+      }
+      #topbar {
+	  margin: 0; padding: 0;
+	  grid-column: 1 / 4;
+	  grid-row: 1;
+      }
+      #bottombar {
+	  margin: 0; padding: 0;
+	  grid-column: 1 / 4;
+	  grid-row: 3;
+      }
+      #workarea {
+	  grid-column: 2;
+	  grid-row: 2;
+      }
+
+      #leftbar {
+	  margin: 0; padding: 0;
+	  padding-top: 12px;
+	  grid-column: 1;
+	  grid-row: 2;
+	  background-color: #343A40;
+	  color: white;
+      }
+
+      #rightbar {
+	  margin: 0; padding: 0;
+	  grid-column: 3;
+	  grid-row: 2;
+	  background-color: #343A40;
+      }
+
+      #leftbar i { width: 48px; height: 36px; text-align: center }
+      #leftbar i.spacer { width: 48px; font-size:8; text-align: center }
+
+      #swatches { column-count: 2; margin: 0; padding: 0; padding-right: 18; height: 240 }
+      #settings { column-count: 1; margin: 0; padding: 0; padding-right: 18; height: 240 }
+      
+      .swatch { width:24; height:24; margin: 4 12 4 12; display: block; border: thin solid white }
+      .swatch:first-child    { margin: 0 12 4 12; }
+
+      #settings label { margin:6 12 0 12;width:72;color:silver;font-size:12;margin-bottom:0 }
+      #settings input { margin:6 12 0 12;margin-top:3;width:72 }
+      
+    </style>
+
     
-    <div class="brushes">
-        <div class = "brush" id="1">
-            <img src="./1x/Brush 2.png" alt="" onclick="brushChoice(1)">
-        </div>
-        
-        <div class = "brush" id="2">
-            <img src="./1x/Brush 3.png" alt="" onclick="brushChoice(2)">
-        </div>
-        
-        <div class = "brush" id="3">
-            <img src="./1x/Brush 1.png" alt="" onclick="brushChoice(3)">
-        </div>
+  </head>
+
+  <body>
+    <div id="topbar">
+      <nav class="navbar navbar-expand navbar-dark bg-dark">
+	<a class="navbar-brand" href="#"><img height="24" src="logo.svg"></a>
+	<div class="collapse navbar-collapse" id="navbarSupportedContent">
+	  <!-- ----------------------------------- -->
+
+	  <ul class="nav navbar-nav mr-auto">
+	    <li class="nav-item dropdown">
+	      <a class="nav-link dropdown-toggle"
+		 href="#">file</a>
+	      <ul class="dropdown-menu">
+		<li>
+		  <a class="dropdown-item"
+		     href="#">load</a>
+		</li>
+		<li>
+		  <a class="dropdown-item"
+		     href="#">save</a>
+		</li>
+		<li>
+		  <a class="dropdown-item"
+		     href="#">save as SVG</a>
+		</li>
+		<li>
+		  <a class="dropdown-item"
+		     href="#">save as PNG</a>
+		</li>
+		<li>
+		  <a class="dropdown-item"
+		     href="#">save as JSON</a>
+		</li>
+	      </ul>
+	    </li>
+	    <li class="nav-item dropdown">
+	      <a class="nav-link dropdown-toggle"
+		 href="#">mode</a>
+	      <ul class="dropdown-menu">
+		<li>
+		  <a class="dropdown-item"
+		     href="#">sketch</a>
+		</li>
+		<li>
+		  <a class="dropdown-item"
+		     href="#">edit</a>
+		</li>
+		<li>
+		  <a class="dropdown-item"
+		     href="#">style</a>
+		</li>
+	      </ul>
+	    </li>
+	    <li class="nav-item dropdown">
+	      <a class="nav-link dropdown-toggle"
+		 href="#">edit</a>
+	      <ul class="dropdown-menu">
+		<li>
+		  <a class="dropdown-item"
+		     href="#">undo</a>
+		</li>
+		<li>
+		  <a class="dropdown-item"
+		     href="#">redo</a>
+		</li>
+		<li><div class="dropdown-divider"></div></li>
+		<li>
+		  <a class="dropdown-item"
+		     href="#">copy</a>
+		</li>
+		<li>
+		  <a class="dropdown-item"
+		     href="#">cut</a>
+		</li>
+		<li>
+		  <a class="dropdown-item"
+		     href="#">paste</a>
+		</li>
+	      </ul>
+	    </li>
+	    <li class="nav-item dropdown">
+	      <a class="nav-link dropdown-toggle"
+		 href="#">brushes</a>
+	      <ul class="dropdown-menu">
+		<li>
+		  <a class="dropdown-item"
+		     href="#">ink</a>
+		</li>
+		<li>
+		  <a class="dropdown-item"
+		     href="#">sharpie</a>
+		</li>
+		<li>
+		  <a class="dropdown-item"
+		     href="#">eraser</a>
+		</li>
+		<li><div class="dropdown-divider"></div></li>
+		<li>
+		  <a class="dropdown-item"
+		     href="#">settings</a>
+		</li>
+	      </ul>
+	    </li>
+	    <li class="nav-item">
+	      <a class="nav-link"
+		 href="#">help</a>
+	    </li>
+	  </ul>
+      </nav>
+      </div>
     </div>
 
-    <canvas id="canvas" resize></canvas>
-
-    <div class="slidecontainer">
-        <p> Simplify </p>
-        <input type="range" min="-1" max="30" value="10" class="slider" id="simplify">
+    <div id="bottombar">
+      <nav id="statusbar" class="navbar navbar-expand fixed-bottom navbar-dark bg-dark">
+	<a class="navbar-brand" href="#">this is the status bar</a>
+      </nav>
     </div>
 
-    <div class="slidecontainer">
-        <p> Strength </p>
-        <input type="range" min="10" max="30" value="12" class="slider" id="strength">
+    <div id="leftbar">
+      <i class="fa fa-lg fa-paint-brush" aria-hidden="true"></i>
+      <i class="fa fa-lg fa-pencil" aria-hidden="true"></i>
+      <i class="fa fa-lg fa-eraser" aria-hidden="true"></i>
+      <i class="spacer" aria-hidden="true">&nbsp;</i>
+      <i class="fa fa-lg fa-clone" aria-hidden="true"></i>
+      <i class="fa fa-lg fa-clipboard" aria-hidden="true"></i>
+      <i class="spacer" aria-hidden="true">&nbsp;</i>
+      <i class="fa fa-lg fa-undo" aria-hidden="true"></i>
+      <i class="fa fa-lg fa-repeat" aria-hidden="true"></i>
+      <i class="spacer" aria-hidden="true">&nbsp;</i>
+      <i class="fa fa-lg fa-tint" aria-hidden="true"></i>
+      <i class="spacer" aria-hidden="true">&nbsp;</i>
+      <i class="fa fa-lg fa-magic " aria-hidden="true"></i>
+      <i class="fa fa-lg fa-circle-thin " aria-hidden="true"></i>
+      <i class="fa fa-lg fa-square-o" aria-hidden="true"></i>
+      <i class="spacer" aria-hidden="true">&nbsp;</i>
+      <i class="fa fa-lg fa-cog" aria-hidden="true"></i>
     </div>
-    
-    <div class="colorPicker"></div>
+    <div class="container-fluid" id="workarea">
+      <canvas width="1600" height="800" id="canvas"></canvas>
+    </div>    
+    <div id="rightbar">
+      <div id="swatches">
+	<div style="background-color:#FFFFFF" class="swatch">&nbsp;</div>
+	<div style="background-color:#BFBFBF" class="swatch">&nbsp;</div>
+	<div style="background-color:#808080" class="swatch">&nbsp;</div>
+	<div style="background-color:#404040" class="swatch">&nbsp;</div>
+	<div style="background-color:#000000" class="swatch">&nbsp;</div>
+	<div style="background-color:#6699FF" class="swatch">&nbsp;</div>
+	<div style="background-color:#3366CC" class="swatch">&nbsp;</div>
+	<div style="background-color:#003399" class="swatch">&nbsp;</div>
+	<div style="background-color:#99CC33" class="swatch">&nbsp;</div>
+	<div style="background-color:#00CC00" class="swatch">&nbsp;</div>
+	<div style="background-color:#669900" class="swatch">&nbsp;</div>
+	<div style="background-color:#FFCC00" class="swatch">&nbsp;</div>
+	<div style="background-color:#FF9900" class="swatch">&nbsp;</div>
+	<div style="background-color:#FF6600" class="swatch">&nbsp;</div>
+	<div style="background-color:#CC0000" class="swatch">&nbsp;</div>
+      </div>
+      <div id="settings">
+	<label for="hue">hue</label>
+	<input id="hue" max="360" min="0" name="hue" step="10" type="range" value="0">
 
-    <script type="text/javascript" src="main.js"></script>
-</body>
+	<label for="saturation">saturation</label>
+	<input id="saturation" max="100" min="0" name="saturation" step="1" type="range" value="50">
+
+	<label for="value">value</label>
+	<input id="value" max="100" min="0" name="value" step="1" type="range" value="0">
+
+	<label for="opacity">opacity</label>
+	<input id="opacity" max="100" min="0" name="opacity" value="100" step="1" type="range">
+
+	<label for="pressure">pressure</label>
+	<input id="pressure" max="100" min="0" name="pressure" value="50" step="1" type="range">
+
+      </div>
+    </div>
+  </body>
+  
 </html>
+
