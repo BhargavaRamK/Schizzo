@@ -13,17 +13,32 @@ function createUUIDv4() {
 }
 
 class Brush {
-    constructor(project, options) {
+    constructor(project, options, callbacks) {
 	this.project = project;
 	this.options = options;
 	this.path = new Path();
+
+	var _this = this;
+	Pressure.set(this.project.view.element, { change: function(f, event){ _this.force = f } });
 	this.path.data.points = [];
     }
 
+    initPath(project) {
+	this.path = new Path();
+
+	this.path.name = createUUIDv4();
+	this.path.addTo(this.project);
+	this.path.data.startTime = (new Date).getTime();
+	this.path.data.points = [];
+    }
+    
+    addPoint(point) {
+	this.path.data.points.push({ point: event.point, time: (new Date).getTime() - this.path.data.startTime, pressure: this.force });
+    }
     
     get onMouseDown() {
 	return function(event){
-	    // console.log(event);
+	    // console.log('super', event);
 	}
     }
 
@@ -50,34 +65,29 @@ class InkBrush extends Brush {
     
     get onMouseDown() {
 	var app = this;
+
+	var somd = super.onMouseDown;
 	
 	return function(event){
 	    // ---------------------------------------------
 	    // initialization stuff needs to happen here
 	    // ---------------------------------------------
+	    
 	    if (app.path) { app.path.selected = false }
 
-	    app.path = new Path()
-
-	    app.path.strokeColor = undefined;
+	    app.initPath(app.project);
 
 	    // --------------------------
+	    // color etc. setup
 	    // this is probably bad
 	    // --------------------------
-	    app.path.fillColor   = Cookies.get('brushColor') || '#222222aa';
-	    app.path.fillColor.alpha = (Cookies.get('brushOpacity') / 100) || 0.66;
-	    app.pressureFactor = Cookies.get('pressureFactor') || 10;
 
-	    // console.log(app.path.fillColor.alpha)
+	    app.path.strokeColor = undefined;
+	    app.path.fillColor       = Cookies.get('brushColor') || '#222222aa';
+	    app.path.fillColor.alpha = (Cookies.get('brushOpacity') / 100) || 0.66;
+	    app.pressureFactor       = Cookies.get('pressureFactor') || 10;
 	    
 	    app.path.add(event.point);
-	    app.path.name = createUUIDv4();
-	    app.path.addTo(app.project);
-
-	    app.path.data.startTime = (new Date).getTime();
-	    app.path.data.points = [];
-	    app.path.data.pressureFactor = app.pressureFactor;
-	    app.path.data.points.push({ point: event.point, time: (new Date).getTime() - app.path.data.startTime });
 	}
     }
 
@@ -104,7 +114,9 @@ class InkBrush extends Brush {
 	    app.path.insert(0, bottom.round());
 	    
 	    app.path.smooth();
-	    app.path.data.points.push({ point: event.point, time: (new Date).getTime() - app.path.data.startTime });
+
+	    app.addPoint(event.point)
+	    // app.path.data.points.push({ point: event.point, time: (new Date).getTime() - app.path.data.startTime });
 	}
     }
 
@@ -116,11 +128,9 @@ class InkBrush extends Brush {
 
 	    app.path.closed = true;
 	    app.path.smooth();
+	    app.addPoint(event.point)
 
-	    app.path.data.points.push({ point: event.point, time: (new Date).getTime() - app.path.data.startTime });
-
-	    console.log(app.path.data.points);
-	    
+	    console.log(app.path.data);
 	}
     }
 }
@@ -132,18 +142,21 @@ class Sharpie extends Brush {
 	return function(event){
 	    if (app.path) { app.path.selected = false }
 
-	    app.pressureFactor = Cookies.get('pressureFactor') || 10;
-	    app.path = new Path()
-	    console.log(Cookies.get('brushColor'));
+	    app.initPath(app.project);
+
+	    console.log(app.path.data);
+	    
+	    // app.path = new Path()
 
 	    app.path.strokeColor       = Cookies.get('brushColor') || 'black';
 	    app.path.strokeColor.alpha = (Cookies.get('brushOpacity') / 100) || 0.8;
+	    app.path.strokeWidth       = Cookies.get('pressureFactor') || 10;
 
-	    app.path.strokeWidth = app.pressureFactor || 10;
+	    app.addPoint(event.point)
 
 	    app.path.add(event.point);
-	    app.path.name = createUUIDv4();
-	    app.path.addTo(app.project);	
+	    // app.path.name = createUUIDv4();
+	    // app.path.addTo(app.project);	
 	};
     }
     
@@ -151,6 +164,7 @@ class Sharpie extends Brush {
 	var app = this;
 	return function(event){
 	    app.path.add(event.point);
+	    app.addPoint(event.point)
 	}
     };
 	
@@ -158,7 +172,10 @@ class Sharpie extends Brush {
 	var app = this;
 	return function(event){
 
+	    app.path.add(event.point);
+	    app.addPoint(event.point)
 	    app.path.simplify();
+
 	    var offset = -1 + app.path.strokeWidth / 2;
 	    
 	    var outerPath = OffsetUtils.offsetPath(app.path, offset);
@@ -172,10 +189,16 @@ class Sharpie extends Brush {
 	    innerPath.closePath()
 	    innerPath.fillColor = app.path.strokeColor;
 	    innerPath.insertBelow(app.path);
+	    innerPath.data = app.path.data;
+	    innerPath.name = app.path.name;
 
+	    var d = JSON.stringify(app.path.data);
+	    console.log(JSON.stringify(app.path.data) == JSON.stringify(innerPath.data));
+	    
 	    app.path.remove();
 	    app.path = innerPath;
-	    app.path.name = createUUIDv4();
+	    console.log(d == JSON.stringify(innerPath.data));
+	    console.log(innerPath.data);
 	}
     };
 }
