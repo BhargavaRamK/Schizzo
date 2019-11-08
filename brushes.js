@@ -5,6 +5,7 @@
 
 */
 
+
 function createUUIDv4() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
 	var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -16,43 +17,36 @@ class Brush {
     constructor(project, options, callbacks) {
 	this.project = project;
 	this.options = options;
-	this.path = new Path();
 
 	var _this = this;
 	Pressure.set(this.project.view.element, { change: function(f, event){ _this.force = f } });
-	this.path.data.points = [];
+	// this.path.data.points = [];
     }
 
     initPath(project) {
 	this.path = new Path();
-
 	this.path.name = createUUIDv4();
 	this.path.addTo(this.project);
 	this.path.data.startTime = (new Date).getTime();
 	this.path.data.points = [];
     }
     
-    addPoint(point) {
-	this.path.data.points.push({ point: event.point, time: (new Date).getTime() - this.path.data.startTime, pressure: this.force });
-    }
-    
-    get onMouseDown() {
-	return function(event){
-	    // console.log('super', event);
-	}
-    }
-
-    get onMouseDrag() {
-	return function(event){
-	    // console.log(event);
-	}
+    addPoint(point, data) {
+	data = data ? data : {};
+	var p = {
+	    point: point,
+	    time: ((new Date).getTime() - this.path.data.startTime),
+	    pressure: (Math.round(this.force * 1000) / 1000) 
+	};
+	p = {...p, ...data};
+	this.path.data.points.push(p);
     }
 
-    get onMouseUp(){
-	return function(event){
-	    // console.log(event);
-	}
-    }
+    lineStartEvent(d)  { return new CustomEvent('lineStart', { detail: d }) }
+    linePointEvent(d)  { return new CustomEvent('linePoint', { detail: d }) }
+    lineFinishEvent(d) { return new CustomEvent('lineFinish', { detail: d }) }    
+    lineEditEvent(d)   { return new CustomEvent('lineEdit', { detail: d }) }
+    lineDeleteEvent(d) { return new CustomEvent('lineDelete', { detail: d }) }
 }
 
 class InkBrush extends Brush {
@@ -62,6 +56,10 @@ class InkBrush extends Brush {
 	Pressure.set(app.project.view.element, { change: function(f, event){ app.force = f } });
     }
 
+    startLine(point, force) {
+	this.path.add(point);
+	super.addPoint(point)
+    }
     
     get onMouseDown() {
 	var app = this;
@@ -82,15 +80,37 @@ class InkBrush extends Brush {
 	    // this is probably bad
 	    // --------------------------
 
+	    var color          =  new Color(Cookies.get('brushColor') || '#222222aa');
+	    color.alpha        = (Cookies.get('brushOpacity') / 100) || 0.66;
+	    var pressureFactor = Cookies.get('pressureFactor') || 10;
+
 	    app.path.strokeColor = undefined;
-	    app.path.fillColor       = Cookies.get('brushColor') || '#222222aa';
-	    app.path.fillColor.alpha = (Cookies.get('brushOpacity') / 100) || 0.66;
-	    app.pressureFactor       = Cookies.get('pressureFactor') || 10;
-	    
-	    app.path.add(event.point);
+	    app.path.fillColor   = color;
+	    app.pressureFactor   = pressureFactor;
+	    app.startLine(event.point, app.force);
 	}
     }
 
+    addPoint(point, middlePoint, force){
+	var lastPoint = this.path.data.points[this.path.data.points.length-1].point;
+	var delta     = point.subtract(lastPoint);
+	var step      = delta.normalize().multiply(this.force * this.pressureFactor);
+
+	step.angle += 90;
+
+	// var middlePoint = point.add(delta.divide(2));
+	
+	var top =    middlePoint.add(step);
+	var bottom = middlePoint.subtract(step);
+
+	this.path.add(top.round());
+	this.path.insert(0, bottom.round());
+	
+	this.path.smooth();
+
+	super.addPoint(point, { middlePoint: middlePoint } )
+    }
+    
     get onMouseDrag() {
 	var app = this;
 
@@ -99,38 +119,27 @@ class InkBrush extends Brush {
 	    // force should be [a basis] + [a factor] * force
 	    // -----------------------------------------------
 
-	    var step = event.delta.normalize().multiply(app.force * app.pressureFactor);
-	    step.angle += 90;
-
 	    // -----------------------------------------------
 	    // NB: using + and - directly doesn't
 	    // seem to work in plain Javascript
 	    // -----------------------------------------------
-
-	    var top =    event.middlePoint.add(step);
-	    var bottom = event.middlePoint.subtract(step);
 	    
-	    app.path.add(top.round());
-	    app.path.insert(0, bottom.round());
-	    
-	    app.path.smooth();
-
-	    app.addPoint(event.point)
-	    // app.path.data.points.push({ point: event.point, time: (new Date).getTime() - app.path.data.startTime });
+	    app.addPoint(event.point, event.middlePoint)
 	}
     }
 
+    lastPoint(point) {
+	this.path.add(point);
+	this.path.closed = true;
+	this.path.smooth();
+	super.addPoint(point)
+    }
+    
     get onMouseUp(){
 	var app = this;
-	
 	return function(event){
-	    app.path.add(event.point);
-
-	    app.path.closed = true;
-	    app.path.smooth();
-	    app.addPoint(event.point)
-
-	    console.log(app.path.data);
+	    app.lastPoint(event.point);
+	    app.path.project.view.element.dispatchEvent(app.lineFinishEvent(app.path));
 	}
     }
 }
@@ -143,20 +152,13 @@ class Sharpie extends Brush {
 	    if (app.path) { app.path.selected = false }
 
 	    app.initPath(app.project);
-
-	    console.log(app.path.data);
 	    
-	    // app.path = new Path()
-
 	    app.path.strokeColor       = Cookies.get('brushColor') || 'black';
 	    app.path.strokeColor.alpha = (Cookies.get('brushOpacity') / 100) || 0.8;
 	    app.path.strokeWidth       = Cookies.get('pressureFactor') || 10;
 
 	    app.addPoint(event.point)
-
 	    app.path.add(event.point);
-	    // app.path.name = createUUIDv4();
-	    // app.path.addTo(app.project);	
 	};
     }
     
@@ -167,38 +169,37 @@ class Sharpie extends Brush {
 	    app.addPoint(event.point)
 	}
     };
+
+    lastPoint(point){
+	this.path.add(point);
+	this.addPoint(point)
+	this.path.simplify();
 	
+	var offset = -1 + this.path.strokeWidth / 2;
+	
+	var outerPath = OffsetUtils.offsetPath(this.path, offset);
+	var innerPath = OffsetUtils.offsetPath(this.path, -offset);
+	
+	innerPath.strokeColor = this.path.strokeColor;
+	
+	outerPath.reverse();
+	
+	innerPath.join(outerPath);
+	innerPath.closePath()
+	innerPath.fillColor = this.path.strokeColor;
+	innerPath.insertBelow(this.path);
+	innerPath.data = this.path.data;
+	innerPath.name = this.path.name;
+	
+	this.path.remove();
+	this.path = innerPath;
+    }
+    
     get onMouseUp() {
 	var app = this;
 	return function(event){
-
-	    app.path.add(event.point);
-	    app.addPoint(event.point)
-	    app.path.simplify();
-
-	    var offset = -1 + app.path.strokeWidth / 2;
-	    
-	    var outerPath = OffsetUtils.offsetPath(app.path, offset);
-	    var innerPath = OffsetUtils.offsetPath(app.path, -offset);
-
-	    innerPath.strokeColor = app.path.strokeColor;
-
-	    outerPath.reverse();
-
-	    innerPath.join(outerPath);
-	    innerPath.closePath()
-	    innerPath.fillColor = app.path.strokeColor;
-	    innerPath.insertBelow(app.path);
-	    innerPath.data = app.path.data;
-	    innerPath.name = app.path.name;
-
-	    var d = JSON.stringify(app.path.data);
-	    console.log(JSON.stringify(app.path.data) == JSON.stringify(innerPath.data));
-	    
-	    app.path.remove();
-	    app.path = innerPath;
-	    console.log(d == JSON.stringify(innerPath.data));
-	    console.log(innerPath.data);
+	    app.lastPoint(event.point)
+	    app.path.project.view.element.dispatchEvent(app.lineFinishEvent(app.path));
 	}
     };
 }
