@@ -19,7 +19,7 @@ class Brush {
 	this.options = options;
 
 	var _this = this;
-	Pressure.set(this.project.view.element, { change: function(f, event){ _this.force = f } });
+	// Pressure.set(this.project.view.element, { change: function(f, event){ _this.force = f } });
 	// this.path.data.points = [];
     }
 
@@ -33,6 +33,7 @@ class Brush {
     
     addPoint(point, data) {
 	data = data ? data : {};
+	console.log(data);
 	var p = {
 	    point: point,
 	    time: ((new Date).getTime() - this.path.data.startTime),
@@ -43,18 +44,28 @@ class Brush {
     }
 
     lineStartEvent(d)  { return new CustomEvent('lineStart', { detail: d }) }
+
     linePointEvent()  {
 	var d = this.path;
 	var points = this.path.data.points;
 	var point = points[points.length-1];
-	point.pathName = this.path.name;
+	point.lineID = this.path.name;
 	point.sequence = points.length-1;
 	return new CustomEvent('linePoint', { detail: point })
 
     }
-    lineFinishEvent(d) { return new CustomEvent('lineFinish', { detail: d }) }    
-    lineEditEvent(d)   { return new CustomEvent('lineEdit', { detail: d }) }
-    lineDeleteEvent(d) { return new CustomEvent('lineDelete', { detail: d }) }
+
+    lineEvent(eventType) {
+	var detail = this.path.exportJSON({asString: false, precision: 2});
+	detail.d = this.path.exportSVG().getAttribute('d');
+	detail.lineID = this.path.name;
+	return new CustomEvent(eventType, { detail: detail })
+    
+    }
+    
+    lineFinishEvent() { return this.lineEvent('lineFinish') }    
+    lineEditEvent()   { return this.lineEvent('lineEdit') }
+    lineDeleteEvent() { return this.lineEvent('lineDelete') }
 }
 
 class InkBrush extends Brush {
@@ -117,7 +128,7 @@ class InkBrush extends Brush {
 	this.path.smooth();
 
 	super.addPoint(point, { middlePoint: middlePoint } )
-	this.path.project.view.element.dispatchEvent(this.linePointEvent(this.path));
+	this.path.project.view.element.dispatchEvent(this.linePointEvent());
     }
     
     get onMouseDrag() {
@@ -189,16 +200,16 @@ class Sharpie extends Brush {
 	};
     }
 
-    addPoint(point) {
+    addPoint(point, data) {
 	this.path.add(point);
-	super.addPoint(point)
+	super.addPoint(point, data)
     }
     
     get onMouseDrag() {
 	var app = this;
 	return function(event){
-	    // app.path.add(event.point);
-	    app.addPoint(event.point)
+	    app.addPoint(event.point, { pressure: app.path.strokeWidth })
+	    app.path.project.view.element.dispatchEvent(app.linePointEvent());
 	}
     };
 
@@ -225,13 +236,15 @@ class Sharpie extends Brush {
 	
 	this.path.remove();
 	this.path = innerPath;
+
+	this.path.project.view.element.dispatchEvent(this.lineFinishEvent());
     }
     
     get onMouseUp() {
 	var app = this;
 	return function(event){
 	    app.lastPoint(event.point)
-	    app.path.project.view.element.dispatchEvent(app.lineFinishEvent(app.path));
+	    // app.path.project.view.element.dispatchEvent(app.lineFinishEvent(app.path));
 	}
     }
 
