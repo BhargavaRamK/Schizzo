@@ -7,7 +7,7 @@
     grid-template-rows: 56px 1fr 40px;
 }
 
-#statusbar * { font-size: 75% !important; }
+#statusbar * { font-size: 100% !important; }
 
 #topbar {
     margin: 0; padding: 0;
