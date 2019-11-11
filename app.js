@@ -30,7 +30,8 @@ var app = new Vue({
 	]
     },
     mounted: function () {
-	paper.setup('canvas');
+	var app = this;
+	// paper.setup('canvas');
 
 	var canvas = document.querySelector('canvas');
 	canvas.style.width ='100%';
@@ -38,10 +39,25 @@ var app = new Vue({
 	
 	canvas.width  = canvas.offsetWidth;
 	canvas.height = canvas.offsetHeight;
-
-	this.brushColor = Cookies.get('brushColor');
-	this.pressureFactor = Cookies.get('pressureFactor');
-	this.brushOpacity = Cookies.get('brushOpacity');
+	this.$nextTick(function () {
+	    this.tool = new Tool();
+	    
+	    this.brushColor = Cookies.get('brushColor');
+	    
+	    this.pressureFactor = Cookies.get('pressureFactor');
+	    this.brushOpacity = Cookies.get('brushOpacity');
+	    
+	    this.setBrushType(Cookies.get('brushType') ? Cookies.get('brushType') : 'sharpie');
+	    
+	    this.frenchCurve = new FrenchCurve();
+	    
+	    $(canvas).on('lineFinish', function(e) {
+	        // app.frenchCurve.breakAtAngle(e.detail, app);	    
+	        console.log('here')
+	    })
+	    // $(canvas).off("lineFinish")
+	})
+	// $(canvas).off()
     },
     methods: {
 	setBrushType: function (type) {
@@ -50,15 +66,36 @@ var app = new Vue({
 		'sharpie':  () => new Sharpie(paper.project),
 		'eraser':   () => new Eraser(paper.project),
 	    };
-
+	    Cookies.set('brushType', type);
+	    console.log(type);
 	    var brush = setBrush[type]();
 
-    	    tool.onMouseDown = brush.onMouseDown;
-    	    tool.onMouseUp = brush.onMouseUp;
-    	    tool.onMouseDrag = brush.onMouseDrag;
+	    this.brush = brush;
+	    
+    	    this.tool.onMouseDown = brush.onMouseDown;
+    	    this.tool.onMouseUp = brush.onMouseUp;
+    	    this.tool.onMouseDrag = brush.onMouseDrag;
 	},
 	setBrushColor: function (event) {
 	    this.brushColor = $(event.target).css('background-color')
+	},
+	centerline: function(){
+	    var paths = this.paper.project.getItems({ recursive: true }).filter( i => i.className.match(/Path/) )
+	    var path = paths[0];
+	    var fat = fattenPath(path, 20)
+	    centerline(fat);
+	    fat.remove()
+	},
+	
+	mergeLines: function(){
+	    var paths = this.paper.project.getItems({ recursive: true }).filter( i => i.className.match(/Path/) )
+	    var points = [];
+
+	    paths.forEach(p => {
+		var u = fattenPath(p)
+		u.strokeColor = 'Yellow';
+		u.strokeWidth = 3;
+	    })
 	}
     },
     watch: {
