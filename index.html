@@ -26,9 +26,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
     
+    <script src="https://labs.mapbox.com/bites/00222/concaveman-bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/voronoi@1.0.0/rhill-voronoi-core.js"></script> 
     
     <script type="text/javascript" src="offset.js"></script>
     <script type="text/javascript" src="brushes.js"></script>
+    <script type="text/javascript" src="frenchcurve.js"></script>
     <script type="text/javascript" src="ui.js"></script>
 
     <title>Schizzo</title>
@@ -92,7 +95,12 @@
       </div>
       <div id="bottombar">
 	<nav id="statusbar" class="navbar navbar-expand fixed-bottom navbar-dark bg-dark">
-	  <a class="navbar-brand" href="#">this is the status bar</a>
+	  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+	    <ul class="nav navbar-nav mr-auto">
+	      <li class="nav-item"><a v-on:click="mergeLines()" class="nav-link" href="#">merge lines</a></li>
+	      <li class="nav-item"><a v-on:click="centerline()" class="nav-link" href="#">calculate centerline</a></li>
+	    </ul>
+	  </div>
 	</nav>
       </div>
 
