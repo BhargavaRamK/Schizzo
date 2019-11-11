@@ -56,7 +56,7 @@ class InkBrush extends Brush {
 	Pressure.set(app.project.view.element, { change: function(f, event){ app.force = f } });
     }
 
-    startLine(point, force) {
+    startLine(point) {
 	this.path.add(point);
 	super.addPoint(point)
     }
@@ -94,11 +94,11 @@ class InkBrush extends Brush {
     addPoint(point, middlePoint, force){
 	var lastPoint = this.path.data.points[this.path.data.points.length-1].point;
 	var delta     = point.subtract(lastPoint);
-	var step      = delta.normalize().multiply(this.force * this.pressureFactor);
+	var step      = delta.normalize().multiply(force * this.pressureFactor);
 
 	step.angle += 90;
 
-	// var middlePoint = point.add(delta.divide(2));
+	middlePoint = middlePoint || point.add(delta.divide(2));
 	
 	var top =    middlePoint.add(step);
 	var bottom = middlePoint.subtract(step);
@@ -124,7 +124,7 @@ class InkBrush extends Brush {
 	    // seem to work in plain Javascript
 	    // -----------------------------------------------
 	    
-	    app.addPoint(event.point, event.middlePoint)
+	    app.addPoint(event.point, event.middlePoint, app.force)
 	}
     }
 
@@ -142,6 +142,24 @@ class InkBrush extends Brush {
 	    app.path.project.view.element.dispatchEvent(app.lineFinishEvent(app.path));
 	}
     }
+
+    fromPoints(points) {
+	console.log(points);
+	
+	var p = points.slice();
+
+	this.initPath(this.project);
+	this.startLine(p.shift().point);
+
+	while (p.length > 1) {
+	    var e = p.shift()
+	    this.addPoint(e.point, e.middlePoint, e.pressure)
+	}
+	this.lastPoint(p.shift().point);
+	console.log(this.path.data.points);
+	// this.path.fillColor = 'Blue';
+	return this.path
+    }
 }
 
 class Sharpie extends Brush {
@@ -158,14 +176,19 @@ class Sharpie extends Brush {
 	    app.path.strokeWidth       = Cookies.get('pressureFactor') || 10;
 
 	    app.addPoint(event.point)
-	    app.path.add(event.point);
+	    // app.path.add(event.point);
 	};
+    }
+
+    addPoint(point) {
+	this.path.add(point);
+	super.addPoint(point)
     }
     
     get onMouseDrag() {
 	var app = this;
 	return function(event){
-	    app.path.add(event.point);
+	    // app.path.add(event.point);
 	    app.addPoint(event.point)
 	}
     };
@@ -201,7 +224,22 @@ class Sharpie extends Brush {
 	    app.lastPoint(event.point)
 	    app.path.project.view.element.dispatchEvent(app.lineFinishEvent(app.path));
 	}
-    };
+    }
+
+    fromPoints(points) {
+	console.log(points);
+	
+	var p = points.slice();
+	
+	this.initPath(this.project);
+
+	this.path.strokeWidth = 12;
+	this.addPoint(p.shift().point);
+
+	while (p.length > 1) { this.addPoint(p.shift().point) }
+	this.lastPoint(p.shift().point);
+	return this.path
+    }
 }
 
 class Eraser extends Brush {
@@ -299,143 +337,3 @@ class Eraser extends Brush {
 	}
     }
 };
-
-class Vectorizer extends Brush {
-    get onMouseDown() {
-	var app = this;
-	return function(event){
-	    var hits = app.project.hitTestAll(event.point).map(h => h.item);
-	    hits.forEach(h => {
-		var path = new Path({ strokeColor: 'black', strokeWidth: 3 });
-		h.data.points.forEach(p => { path.add(p) })
-		path.simplify();
-
-		var cleanPath = new Path({ strokeColor: 'black', strokeWidth: 3 });
-		cleanPath.strokeWidth = 3;
-		var step = 0.5;
-		var points = [ ...Array(Math.ceil(path.length) + 1).keys() ]
-		    .map(i => {
-			var r = ((i > path.length) ?
-				 path.getPointAt(path.length) : 
-				 path.getPointAt(i));
-			return r
-		    } )
-		
-		points.forEach(p => {
-		    if (h.contains(p)) {
-			cleanPath.add(p)
-		    } else if (p.getDistance(h.getNearestPoint(p)) < 2) {
-			cleanPath.add(p)
-		    } else {
-			cleanPath.simplify()
-			cleanPath = new Path({ strokeColor: 'black', strokeWidth: 3 });
-			cleanPath.strokeWidth = 3;
-		    }
-		})
-		cleanPath.simplify()
-		// var voronoi =  new Voronoi();
-		// console.log(cleanPath.exportSVG().getAttribute('d'));
-		// var bez = Bezier.SVGtoBeziers(cleanPath.exportSVG().getAttribute('d'));
-
-		// console.log(bez.curves.map(c => { return c.arcs().map(a => a) }))
-		// var p =  PathItem.create(bez.offset(16).curves.map(c => c.toSVG()).join(' '));
-		// p.strokeColor = 'black';
-		// p.addTo(project)
-		path.remove()
-	    })
-	};
-    }
-}
-
-class Clipper extends Brush {
-    constructor(project, options) {
-	super(project, options)
-	this.lineIds = {};
-	this.lines = [];
-	
-	this.intersectingLines = function(lines){
-	    var app = this;
-	    return lines.filter(l => {
-		return l.getIntersections && l.getIntersections(app.eraseCircle.toPath(false)).length && l.closed == false;
-	    })
-	} 
-	
-	this.getFirstLine = function(){
-	    var app = this;
-	    if (app.firstPath === undefined) {
-		var lines = project.getItems({ recursive: true })
-		lines = app.intersectingLines(lines)
-		lines.forEach(l => {
-		    if (!app.lineIds[l.id]) {
-			app.lineIds[l.id] = app.lineIds[l.id] == undefined ? 1 : app.lineIds[l.id] + 1;
-			app.lines.push(l);
-		    }
-		})
-	    }
-	}
-    }
-    
-    get onMouseDown() {
-	var app = this;
-	return function(event) {
-	    app.eraseCircle = new Shape.Circle(event.point, 12)
-	    app.eraseCircle.fillColor = "#ffffff88";
-	    app.eraseCircle.name = "eraser";
-	    // app.callbackId = window.setInterval(function(){
-	    // 	app.eraseCircle.radius++
-	    // }, 100);
-
-	    
-	}
-    }
-    get onMouseDrag() {
-	var app = this;
-	return function(event) {
-	    app.eraseCircle.position = event.point
-	    app.getFirstLine()
-	    // console.log(app.lines.map(l => l.id ));
-	    // console.log(app.lineIds);
-	}
-    }    
-    
-    get onMouseUp() {
-	var app = this;
-	return function() {
-	    window.clearInterval(app.callbackId)
-	    var lines = app.lines;
-	    
-	    var crossings = [
-		lines[0].getCrossings(lines[1]),
-		lines[1].getCrossings(lines[0])
-	    ];
-
-	    var stubs = [];
-	    var trunks = [];
-	    
-	    if (crossings[0].length) {
-	    	var p = lines[0].splitAt(crossings[0][0])
-		stubs.push(p.length > lines[0].length ? lines[0] : p)
-		trunks.push(p.length <= lines[0].length ? lines[0] : p)
-	    }
-
-	    if (crossings[1].length) {
-	    	var p = lines[1].splitAt(crossings[1][0])
-		stubs.push(p.length > lines[1].length ? lines[1] : p)
-		trunks.push(p.length <= lines[1].length ? lines[1] : p)
-	    }
-
-	    // trunks[0].closed = false;
-	    // trunks[1].closed = false;
-
-	    // trunks[0].join(trunks[1])
-	    // trunks[0].strokeColor = "white";
-	    // trunks[0].closed = false;
-	    
-	    stubs.forEach(l => l.remove());
-	    
-	    app.eraseCircle.remove()
-	    app.lineIds = {};
-	    app.lines = [];
-	}
-    }
-}
