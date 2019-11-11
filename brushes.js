@@ -33,7 +33,6 @@ class Brush {
     
     addPoint(point, data) {
 	data = data ? data : {};
-	console.log(data);
 	var p = {
 	    point: point,
 	    time: ((new Date).getTime() - this.path.data.startTime),
@@ -43,7 +42,6 @@ class Brush {
 	this.path.data.points.push(p);
     }
 
-    lineStartEvent(d)  { return new CustomEvent('lineStart', { detail: d }) }
 
     linePointEvent()  {
 	var d = this.path;
@@ -56,13 +54,16 @@ class Brush {
     }
 
     lineEvent(eventType) {
-	var detail = this.path.exportJSON({asString: false, precision: 2});
+	var detail = {};
+	detail.path = this.path.exportJSON({asString: false, precision: 2});
 	detail.d = this.path.exportSVG().getAttribute('d');
 	detail.lineID = this.path.name;
+	detail.points = this.path.data.points;
 	return new CustomEvent(eventType, { detail: detail })
     
     }
     
+    lineStartEvent()  { return this.lineEvent('lineStart') }
     lineFinishEvent() { return this.lineEvent('lineFinish') }    
     lineEditEvent()   { return this.lineEvent('lineEdit') }
     lineDeleteEvent() { return this.lineEvent('lineDelete') }
@@ -82,22 +83,9 @@ class InkBrush extends Brush {
     
     get onMouseDown() {
 	var app = this;
-
-	var somd = super.onMouseDown;
-	
 	return function(event){
-	    // ---------------------------------------------
-	    // initialization stuff needs to happen here
-	    // ---------------------------------------------
-	    
 	    if (app.path) { app.path.selected = false }
-
 	    app.initPath(app.project);
-
-	    // --------------------------
-	    // color etc. setup
-	    // this is probably bad
-	    // --------------------------
 
 	    var color          =  new Color(Cookies.get('brushColor') || '#222222aa');
 	    color.alpha        = (Cookies.get('brushOpacity') / 100) || 0.66;
@@ -133,19 +121,7 @@ class InkBrush extends Brush {
     
     get onMouseDrag() {
 	var app = this;
-
-	return function(event){
-	    // -----------------------------------------------
-	    // force should be [a basis] + [a factor] * force
-	    // -----------------------------------------------
-
-	    // -----------------------------------------------
-	    // NB: using + and - directly doesn't
-	    // seem to work in plain Javascript
-	    // -----------------------------------------------
-	    
-	    app.addPoint(event.point, event.middlePoint, app.force)
-	}
+	return function(event){ app.addPoint(event.point, event.middlePoint, app.force) }
     }
 
     lastPoint(point) {
@@ -158,14 +134,10 @@ class InkBrush extends Brush {
     
     get onMouseUp(){
 	var app = this;
-	return function(event){
-	    app.lastPoint(event.point);
-	}
+	return function(event){ app.lastPoint(event.point) }
     }
 
     fromPoints(points) {
-	console.log(points);
-	
 	var p = points.slice();
 
 	this.initPath(this.project);
@@ -177,7 +149,6 @@ class InkBrush extends Brush {
 	}
 	this.lastPoint(p.shift().point);
 	console.log(this.path.data.points);
-	// this.path.fillColor = 'Blue';
 	return this.path
     }
 }
@@ -195,8 +166,8 @@ class Sharpie extends Brush {
 	    app.path.strokeColor.alpha = (Cookies.get('brushOpacity') / 100) || 0.8;
 	    app.path.strokeWidth       = Cookies.get('pressureFactor') || 10;
 
-	    app.addPoint(event.point)
-	    // app.path.add(event.point);
+	    app.addPoint(event.point, { pressure: app.path.strokeWidth })
+	    app.path.project.view.element.dispatchEvent(app.linePointEvent());
 	};
     }
 
