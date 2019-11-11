@@ -43,7 +43,12 @@ class Brush {
     }
 
     lineStartEvent(d)  { return new CustomEvent('lineStart', { detail: d }) }
-    linePointEvent(d)  { return new CustomEvent('linePoint', { detail: d }) }
+    linePointEvent()  {
+	var d = this.path;
+	var points = this.path.data.points;
+	return new CustomEvent('linePoint', { detail: points[points.length-1] })
+
+    }
     lineFinishEvent(d) { return new CustomEvent('lineFinish', { detail: d }) }    
     lineEditEvent(d)   { return new CustomEvent('lineEdit', { detail: d }) }
     lineDeleteEvent(d) { return new CustomEvent('lineDelete', { detail: d }) }
@@ -109,6 +114,7 @@ class InkBrush extends Brush {
 	this.path.smooth();
 
 	super.addPoint(point, { middlePoint: middlePoint } )
+	this.path.project.view.element.dispatchEvent(this.linePointEvent(this.path));
     }
     
     get onMouseDrag() {
@@ -133,13 +139,13 @@ class InkBrush extends Brush {
 	this.path.closed = true;
 	this.path.smooth();
 	super.addPoint(point)
+	this.path.project.view.element.dispatchEvent(this.linePointEvent(this.path));	
     }
     
     get onMouseUp(){
 	var app = this;
 	return function(event){
 	    app.lastPoint(event.point);
-	    app.path.project.view.element.dispatchEvent(app.lineFinishEvent(app.path));
 	}
     }
 
