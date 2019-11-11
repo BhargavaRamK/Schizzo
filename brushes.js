@@ -46,7 +46,10 @@ class Brush {
     linePointEvent()  {
 	var d = this.path;
 	var points = this.path.data.points;
-	return new CustomEvent('linePoint', { detail: points[points.length-1] })
+	var point = points[points.length-1];
+	point.pathName = this.path.name;
+	point.sequence = points.length-1;
+	return new CustomEvent('linePoint', { detail: point })
 
     }
     lineFinishEvent(d) { return new CustomEvent('lineFinish', { detail: d }) }    
